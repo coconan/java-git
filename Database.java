@@ -15,8 +15,8 @@ public class Database {
         this.path = path;
     }
 
-    public void store(Blob blob) throws NoSuchAlgorithmException, IOException {
-        byte[] input = blob.toString().getBytes("UTF-8");
+    public void store(Object object) throws NoSuchAlgorithmException, IOException {
+        byte[] input = object.getByteArray();
         byte[] output = new byte[input.length];
         Deflater compresser = new Deflater();
         compresser.setInput(input);
@@ -27,7 +27,9 @@ public class Database {
         MessageDigest digest = MessageDigest.getInstance("SHA-1");
 	    digest.reset();
 	    digest.update(input);
-	    String sha1 = String.format("%040x", new BigInteger(1, digest.digest()));
+        BigInteger oid = new BigInteger(1, digest.digest());
+        object.setOid(oid);
+	    String sha1 = String.format("%040x", oid);
 
         Path dir = path.resolve(sha1.substring(0, 2));
         if (!dir.toFile().exists()) {

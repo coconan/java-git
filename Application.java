@@ -12,9 +12,11 @@ import java.util.Set;
 
 public class Application {
     public static void main(String[] args) throws Exception {
+        Path path = Paths.get(".");
         Path gitPath = Paths.get(".git");        
         Path databasePath = gitPath.resolve("objects");
-        
+
+        Workspace workspace = new Workspace(path);
         Database database = new Database(databasePath);
         
         if (!gitPath.toFile().exists()) {
@@ -24,18 +26,23 @@ public class Application {
             Files.createDirectory(databasePath);
         }
 
-        List<Blob> blobs = createBlobs();
-
-        for (Blob blob : blobs) {
-            database.store(blob);
+        // write blobs
+        List<Entry> entries = createEntries(workspace);
+        for (Entry entry : entries) {
+            database.store(entry.getBlob());
         }
+
+        // write tree
+        Tree tree = new Tree(entries);
+        database.store(tree);
+
+        System.out.println(String.format("%040x", tree.getOid()));
     }
 
-    private static List<Blob> createBlobs() throws IOException {
-        Path wd = Paths.get(".");
-        File[] files = wd.toFile().listFiles();
+    private static List<Entry> createEntries(Workspace workspace) throws IOException {
+        File[] files = workspace.getFiles();
     
-        List<Blob> blobs = new ArrayList<>();
+        List<Entry> entries = new ArrayList<>();
         for (File file : files) {
             if (isIgnoreFile(file)) {
                 continue;
@@ -50,11 +57,11 @@ public class Application {
                     }
                 }
                 Byte[] contentBytes = content.toArray(new Byte[0]);
-                blobs.add(new Blob(contentBytes));    
+                entries.add(new Entry(new Blob(contentBytes), file.getName()));    
             }
         }
 
-        return blobs;
+        return entries;
     }
 
     private static boolean isIgnoreFile(File file) {
